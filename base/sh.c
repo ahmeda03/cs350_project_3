@@ -12,6 +12,8 @@
 #define BACK  5
 
 #define MAXARGS 10
+#define MAXHIST 10
+#define MAXCMDLEN 100
 
 struct cmd {
   int type;
@@ -49,6 +51,14 @@ struct backcmd {
   struct cmd *cmd;
 };
 
+//struct histcmd{
+  //cmdHist should malloc enough bytes to store a command every time we call a new cmd
+  char *cmdHist[MAXHIST+1][MAXCMDLEN]; //stores the history, we want an extra row in the bottom of the array to act as a trash can
+  int cmdAmt;
+  //cmdHist is empty, we print the entire thing no matter if something is in it
+//};
+
+
 int fork1(void);  // Fork but panics on failure.
 void panic(char*);
 struct cmd *parsecmd(char*);
@@ -63,7 +73,6 @@ runcmd(struct cmd *cmd)
   //struct listcmd *lcmd;
   //struct pipecmd *pcmd;
   //struct redircmd *rcmd;
-  
   if(cmd == 0)
     exit();
 
@@ -109,12 +118,29 @@ getcmd(char *buf, int nbuf)
   return 0;
 }
 
+void addHist(char *cmd){
+  //if our cmd is non null
+  if(cmd[0] != '\0'){
+    //printf(2,"curr cmd count: %p\n", cmdAmt);
+    int cmdLen = strlen(cmd);
+    if(cmdAmt < MAXHIST){
+      cmdAmt++;
+      //printf(2, "adding to cmdAmt. Curr amt = %p\n", cmdAmt);
+    }
+    int index;
+    for(index =cmdAmt-1; index>=0;index--){ //start from the bottom and move things down
+      memmove(cmdHist[index+1],cmdHist[index],sizeof(char)*MAXCMDLEN); //if we are at 10, we move the last cmd into the trash
+    }
+    memmove(cmdHist[0], cmd, sizeof(char)*MAXCMDLEN);
+  }
+}
+
 int
 main(void)
 {
   static char buf[100];
   int fd;
-
+  //cmdAmt =0; //how many commands we have
   // Ensure that three file descriptors are open.
   while((fd = open("console", O_RDWR)) >= 0){
     if(fd >= 3){
@@ -132,8 +158,54 @@ main(void)
         printf(2, "cannot cd %s\n", buf+3);
       continue;
     }
-    if(fork1() == 0)
+    else if(buf[0] == 'h' && buf[1] == 'i' && buf[2] == 's' && buf[3] == 't' && buf[4] == ' '){
+      //printf(2, "this is where we do history stuff\n");
+      //breaking the code a tiny bit
+      //this is the code that should execute if we have "print" after "hist"
+      //otherwise if the char that comes after hist is a digit, call runcmd(parsecmd(cmdHist[index]))????
+      int asciiVal = (int)buf[5];
+      int secondChar = (int)buf[6];
+      //printf(2, "ascii val of index is %d\n", asciiVal);
+      if(buf[5] == 'p'){
+        int index;
+        if(cmdAmt>0){
+          for(index=0;index<cmdAmt;index++){
+            printf(2, "Previous command %d: %s",index+1, cmdHist[index]);
+          }
+        }
+      }
+      else if(asciiVal > 47 && asciiVal < 58 && asciiVal-48 <= cmdAmt){
+        char *cmd;
+        int index;
+        //in case we have 10 which is a double digit
+        if(asciiVal == 49 && secondChar == 48){
+          cmd = cmdHist[9];
+        }
+        //else we should be fine for single digits
+        else{
+            for(index =0; index<cmdAmt-1;index++){
+            if(index == asciiVal-49){
+              cmd = cmdHist[index];
+              //printf(2, "extracting cmd %s",cmdHist[index]);
+              break;
+            }
+          }
+        }
+        if(fork1() == 0){
+          runcmd(parsecmd(cmd));
+        }
+      }
+      else{
+        printf(2,"Error: incorrect history command format\ncontinuing...\n");
+      }
+      continue;
+    }
+    else{
+      addHist(buf);
+    }
+    if(fork1() == 0){
       runcmd(parsecmd(buf));
+    }
     wait();
   }
   exit();
@@ -295,12 +367,14 @@ struct cmd *nulterminate(struct cmd*);
 struct cmd*
 parsecmd(char *s)
 {
+  //s is the input
   char *es;
+  //es is the input + its len at the end
   struct cmd *cmd;
-
   es = s + strlen(s);
   cmd = parseline(&s, es);
   peek(&s, es, "");
+  //if there is parts of the input that isnt being used/processed
   if(s != es){
     printf(2, "leftovers: %s\n", s);
     panic("syntax");
@@ -310,10 +384,11 @@ parsecmd(char *s)
 }
 
 struct cmd*
+//ps is a pointer to a string
 parseline(char **ps, char *es)
 {
   struct cmd *cmd;
-
+  //ps is a pointer to the input
   cmd = parsepipe(ps, es);
   while(peek(ps, es, "&")){
     gettoken(ps, es, 0, 0);
@@ -330,7 +405,6 @@ struct cmd*
 parsepipe(char **ps, char *es)
 {
   struct cmd *cmd;
-
   cmd = parseexec(ps, es);
   if(peek(ps, es, "|")){
     gettoken(ps, es, 0, 0);
@@ -344,7 +418,6 @@ parseredirs(struct cmd *cmd, char **ps, char *es)
 {
   int tok;
   char *q, *eq;
-
   while(peek(ps, es, "<>")){
     tok = gettoken(ps, es, 0, 0);
     if(gettoken(ps, es, &q, &eq) != 'a')
@@ -368,7 +441,6 @@ struct cmd*
 parseblock(char **ps, char *es)
 {
   struct cmd *cmd;
-
   if(!peek(ps, es, "("))
     panic("parseblock");
   gettoken(ps, es, 0, 0);
@@ -387,9 +459,9 @@ parseexec(char **ps, char *es)
   int tok, argc;
   struct execcmd *cmd;
   struct cmd *ret;
-
-  if(peek(ps, es, "("))
+  if(peek(ps, es, "(")){
     return parseblock(ps, es);
+  }
 
   ret = execcmd();
   cmd = (struct execcmd*)ret;
@@ -404,8 +476,9 @@ parseexec(char **ps, char *es)
     cmd->argv[argc] = q;
     cmd->eargv[argc] = eq;
     argc++;
-    if(argc >= MAXARGS)
+    if(argc >= MAXARGS){
       panic("too many args");
+    }
     ret = parseredirs(ret, ps, es);
   }
   cmd->argv[argc] = 0;
@@ -423,7 +496,6 @@ nulterminate(struct cmd *cmd)
   struct listcmd *lcmd;
   struct pipecmd *pcmd;
   struct redircmd *rcmd;
-
   if(cmd == 0)
     return 0;
 
