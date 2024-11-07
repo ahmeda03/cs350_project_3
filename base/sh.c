@@ -71,7 +71,7 @@ runcmd(struct cmd *cmd)
   //struct backcmd *bcmd;
   struct execcmd *ecmd;
   //struct listcmd *lcmd;
-  //struct pipecmd *pcmd;
+  struct pipecmd *pcmd;
   //struct redircmd *rcmd;
   if(cmd == 0)
     exit();
@@ -97,7 +97,39 @@ runcmd(struct cmd *cmd)
     break;
 
   case PIPE:
-    printf(2, "Pipe Not implemented\n");
+    // printf(2, "Pipe Not implemented\n");
+    int pdfs[2];
+    pcmd = (struct pipecmd*) cmd;
+
+    int proc_pipe = pipe(pdfs);
+    if(proc_pipe < 0) { 
+      panic("pipe");
+    }
+
+    int first_child = fork1();
+    if(first_child == 0) { // in first child
+        close(1);
+        dup(pdfs[1]);
+        close(pdfs[0]);
+        close(pdfs[1]);
+
+        runcmd(pcmd->left);
+    }
+
+    int second_child = fork1();
+    if(second_child == 0) { // in second child
+        close(0);
+        dup(pdfs[0]);
+        close(pdfs[1]);
+        close(pdfs[0]);
+        
+        runcmd(pcmd->right);
+    }
+
+    close(pdfs[1]);
+    close(pdfs[0]);
+    wait();
+    wait();
     break;
 
   case BACK:
