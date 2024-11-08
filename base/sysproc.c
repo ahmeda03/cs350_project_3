@@ -118,3 +118,14 @@ sys_chpr(void)
 }
 
 
+int
+sys_waitpid(int pid, int* status, int options)
+{
+  int p;
+  int* s;
+  int o;
+  argint(0, &p);
+  argptr(1,&s, 4); // size of ptr is at least 4 bytes in xv6
+  argint(2, &o);
+  return waitpid(p, s, o);
+}

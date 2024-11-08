@@ -68,9 +68,9 @@ void
 runcmd(struct cmd *cmd)
 {
   //int p[2];
-  //struct backcmd *bcmd;
+  struct backcmd *bcmd;
   struct execcmd *ecmd;
-  //struct listcmd *lcmd;
+  struct listcmd *lcmd;
   struct pipecmd *pcmd;
   struct redircmd *rcmd;
   if(cmd == 0)
@@ -105,7 +105,11 @@ runcmd(struct cmd *cmd)
     break;
 
   case LIST:
-    printf(2, "List Not Implemented\n");
+    lcmd = (struct listcmd*)cmd;
+    if(fork1() == 0)
+      runcmd(lcmd->left);
+    wait();
+    runcmd(lcmd->right);
     break;
 
   case PIPE:
@@ -145,7 +149,9 @@ runcmd(struct cmd *cmd)
     break;
 
   case BACK:
-    printf(2, "Backgrounding not implemented\n");
+    bcmd = (struct backcmd*)cmd;
+    if(fork1() == 0)
+      runcmd(bcmd->cmd);
     break;
   }
   exit();
