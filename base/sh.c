@@ -224,16 +224,17 @@ main(void)
           }
         }
       }
-      else if(asciiVal > 47 && asciiVal < 58 && asciiVal-48 <= cmdAmt){
+      else if(asciiVal > 47 && asciiVal < 58){
         char *cmd;
         int index;
         //in case we have 10 which is a double digit
         if(asciiVal == 49 && secondChar == 48){
+          //printf(2, "extracting the last cmd: %s",cmdHist[9]);
           cmd = cmdHist[9];
         }
         //else we should be fine for single digits
         else{
-            for(index =0; index<cmdAmt-1;index++){
+            for(index =0; index<cmdAmt;index++){
             if(index == asciiVal-49){
               cmd = cmdHist[index];
               //printf(2, "extracting cmd %s",cmdHist[index]);
@@ -242,6 +243,7 @@ main(void)
           }
         }
         if(fork1() == 0){
+          //printf(2, "forking...\n");
           runcmd(parsecmd(cmd));
         }
       }
