@@ -2,3 +2,5 @@ Our group met via a Discord call to go over the project specifications and talke
 
 Tu - I implemented the multiline and background control operators. The purpose of those operators, for the multiline, was to allow users to type in multiple commands/pipelines that would run sequentially. The background operator allows for called processes to run in the
 background which let users immediately type in another command without waiting for the previous process.
+
+Thomas- I implemented the shell history command. the purpose of the hist command is to be able to view and execute any of the 10 most recent shell commands. I stored the commands in a 2d string array with a trash index. When the number of commands exceeds 10, the least recent command gets written to the trash index, overwriting the command that was in the trash index before. When the user calls to execute a previous command, the 2d string array returns the desired command and then the command is ran as normal.
