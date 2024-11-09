@@ -106,6 +106,7 @@ runcmd(struct cmd *cmd)
 
   case LIST:
     lcmd = (struct listcmd*)cmd;
+    // Run all commands in the left tree nodes, then the right
     if(fork1() == 0)
       runcmd(lcmd->left);
     wait();
@@ -150,6 +151,7 @@ runcmd(struct cmd *cmd)
 
   case BACK:
     bcmd = (struct backcmd*)cmd;
+    // Removed wait() to tell the shell that it doesn't have to wait for the typed command to finish but can run in the background instead
     if(fork1() == 0)
       runcmd(bcmd->cmd);
     break;
