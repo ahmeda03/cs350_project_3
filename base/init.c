@@ -31,17 +31,7 @@ main(void)
       printf(1, "init: exec sh failed\n");
       exit();
     }
-
-    while((wpid = waitpid(-1, 0, 1)) != -1) {
-    if (wpid > 0 && wpid != pid) {
+    while((wpid=wait()) >= 0 && wpid != pid)
       printf(1, "zombie!\n");
-    } else if (wpid == pid) {
-      break;
-    }
-  }
-
-  // Old code to check for zombies
-  // while((wpid=wait()) >= 0 && wpid != pid)
-  //     printf(1, "zombie!\n");
   }
 }
