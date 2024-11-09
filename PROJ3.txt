@@ -1,0 +1,4 @@
+Our group met via a Discord call to go over the project specifications and talked amongst eachother about the file we were expected to work on. 
+
+Tu - I implemented the multiline and background control operators. The purpose of those operators, for the multiline, was to allow users to type in multiple commands/pipelines that would run sequentially. The background operator allows for called processes to run in the
+background which let users immediately type in another command without waiting for the previous process.
